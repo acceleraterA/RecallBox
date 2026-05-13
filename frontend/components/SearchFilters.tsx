@@ -6,12 +6,13 @@ import type { ItemFilters } from "@/lib/types";
 
 type Props = {
   filters: ItemFilters;
+  tags: string[];
   onChange: (filters: ItemFilters) => void;
 };
 
 const platforms = ["", "web", "youtube", "bilibili", "xiaohongshu", "douyin", "wechat_article"];
 
-export function SearchFilters({ filters, onChange }: Props) {
+export function SearchFilters({ filters, tags, onChange }: Props) {
   const [q, setQ] = useState(filters.q ?? "");
   const [platform, setPlatform] = useState(filters.platform ?? "");
   const [tag, setTag] = useState(filters.tag ?? "");
@@ -60,7 +61,14 @@ export function SearchFilters({ filters, onChange }: Props) {
       </label>
       <label className="field compact">
         <span>Tag</span>
-        <input value={tag} placeholder="interview" onChange={(event) => setTag(event.target.value)} />
+        <select value={tag} onChange={(event) => setTag(event.target.value)}>
+          <option value="">All</option>
+          {tags.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="field compact">
         <span>From</span>

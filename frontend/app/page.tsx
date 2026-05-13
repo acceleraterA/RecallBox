@@ -5,11 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 import { AddItemForm } from "@/components/AddItemForm";
 import { ItemCard } from "@/components/ItemCard";
 import { SearchFilters } from "@/components/SearchFilters";
-import { createItem, getItems } from "@/lib/api";
+import { createItem, getItems, getTags } from "@/lib/api";
 import type { Item, ItemFilters } from "@/lib/types";
 
 export default function HomePage() {
   const [items, setItems] = useState<Item[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [filters, setFilters] = useState<ItemFilters>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,13 +28,24 @@ export default function HomePage() {
     }
   }, [filters]);
 
+  const loadTags = useCallback(async () => {
+    try {
+      const data = await getTags();
+      setTags(data);
+    } catch {
+      setTags([]);
+    }
+  }, []);
+
   useEffect(() => {
     loadItems();
-  }, [loadItems]);
+    loadTags();
+  }, [loadItems, loadTags]);
 
   async function handleCreate(input: { url: string; note?: string }) {
     await createItem(input);
     await loadItems();
+    await loadTags();
   }
 
   function handleFiltersChange(nextFilters: ItemFilters) {
@@ -55,7 +67,7 @@ export default function HomePage() {
       </section>
 
       <section className="list-section">
-        <SearchFilters filters={filters} onChange={handleFiltersChange} />
+        <SearchFilters filters={filters} tags={tags} onChange={handleFiltersChange} />
 
         {error ? <p className="error-box">{error}</p> : null}
         {loading ? <p className="muted">Loading saved links...</p> : null}

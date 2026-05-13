@@ -101,6 +101,12 @@ def list_items(
     return [_serialize_item(item) for item in items]
 
 
+@router.get("/tags", response_model=list[str])
+def list_tags(db: Session = Depends(get_db)) -> list[str]:
+    user = crud.get_or_create_default_user(db)
+    return crud.list_tags(db, user_id=user.id)
+
+
 @router.get("/{item_id}", response_model=ItemOut)
 def get_item(item_id: int, db: Session = Depends(get_db)) -> ItemOut:
     user = crud.get_or_create_default_user(db)

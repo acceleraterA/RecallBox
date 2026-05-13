@@ -126,5 +126,15 @@ def set_item_tags(db: Session, item: Item, names: list[str]) -> None:
     item.tags = get_or_create_tags(db, names)
 
 
+def list_tags(db: Session, *, user_id: int) -> list[str]:
+    statement = (
+        select(Tag.name)
+        .where(Tag.items.any(Item.user_id == user_id))
+        .distinct()
+        .order_by(Tag.name)
+    )
+    return list(db.scalars(statement).all())
+
+
 def delete_item(db: Session, item: Item) -> None:
     db.delete(item)

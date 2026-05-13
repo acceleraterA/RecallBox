@@ -66,6 +66,11 @@ export async function getItems(filters: ItemFilters = {}): Promise<Item[]> {
   return apiRequest<Item[]>(`/items${query ? `?${query}` : ""}`);
 }
 
+
+export async function getTags(): Promise<string[]> {
+  return apiRequest<string[]>("/items/tags");
+}
+
 export async function createItem(input: CreateItemInput): Promise<Item> {
   return apiRequest<Item>("/items", {
     method: "POST",

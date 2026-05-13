@@ -213,6 +213,7 @@ Fly.io option:
 ```http
 POST /items
 GET /items?q=keyword&platform=web&tag=profile&date_from=2026-01-01&date_to=2026-01-31&limit=50&offset=0
+GET /items/tags
 GET /items/{id}
 PATCH /items/{id}
 DELETE /items/{id}
