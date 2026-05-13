@@ -12,6 +12,7 @@ from app.llm import generate_enrichment
 from app.metadata import extract_metadata
 from app.platform import detect_platform
 from app.schemas import ItemCreate, ItemOut, ItemUpdate
+from app.share import extract_first_url, inferred_tags, title_from_share_text
 
 router = APIRouter(prefix="/items", tags=["items"])
 
@@ -36,7 +37,11 @@ def _serialize_item(item) -> ItemOut:
 @router.post("", response_model=ItemOut, status_code=status.HTTP_201_CREATED)
 def create_item(payload: ItemCreate, db: Session = Depends(get_db)) -> ItemOut:
     user = crud.get_or_create_default_user(db)
-    url = str(payload.url)
+    raw_input = payload.url.strip()
+    url = extract_first_url(raw_input)
+    if not url:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Paste a valid URL")
+
     item = crud.create_item(
         db,
         user_id=user.id,
@@ -50,6 +55,8 @@ def create_item(payload: ItemCreate, db: Session = Depends(get_db)) -> ItemOut:
     item.description = metadata.description
     item.thumbnail_url = metadata.thumbnail_url
     item.status = "failed" if metadata.error else "ready"
+    if not item.title:
+        item.title = title_from_share_text(raw_input, url)
 
     enrichment = generate_enrichment(
         title=item.title,
@@ -57,8 +64,11 @@ def create_item(payload: ItemCreate, db: Session = Depends(get_db)) -> ItemOut:
         note=item.note,
     )
     item.summary = enrichment.summary
+    tags = inferred_tags(url, raw_input)
     if enrichment.tags:
-        crud.set_item_tags(db, item, enrichment.tags)
+        tags.extend(enrichment.tags)
+    if tags:
+        crud.set_item_tags(db, item, tags)
 
     db.commit()
     db.refresh(item)

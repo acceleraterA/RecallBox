@@ -7,7 +7,9 @@ V1 is intentionally small: one web app, one FastAPI API, one Postgres database, 
 ## Features For V1
 
 - Save links manually with an optional note.
+- Paste platform share text that contains a URL; RecallBox extracts the first URL automatically.
 - Detect platform from URL, including YouTube, Bilibili, Xiaohongshu, Douyin, WeChat articles, and generic web pages.
+- Auto-tag Xiaohongshu and Douyin saves as `post`, `profile`, or `collection` when the URL/share text makes that clear.
 - Extract basic metadata with Open Graph tags first: title, description, and thumbnail.
 - Save URLs even when metadata extraction fails, with `status="failed"`.
 - View all saved items.
@@ -210,7 +212,7 @@ Fly.io option:
 
 ```http
 POST /items
-GET /items?q=keyword&platform=web&tag=interview&date_from=2026-01-01&date_to=2026-01-31&limit=50&offset=0
+GET /items?q=keyword&platform=web&tag=profile&date_from=2026-01-01&date_to=2026-01-31&limit=50&offset=0
 GET /items/{id}
 PATCH /items/{id}
 DELETE /items/{id}
@@ -224,6 +226,17 @@ DELETE /items/{id}
   "tags": ["kafka", "interview"]
 }
 ```
+
+`POST /items` accepts either a plain URL or share text containing a URL:
+
+```json
+{
+  "url": "我在小红书收获了18.9K次赞与收藏，来看看我的主页>> https://xhslink.com/m/1MNi9bPOhUm",
+  "note": "creator to revisit"
+}
+```
+
+The backend stores the extracted URL and may add tags such as `profile`, `collection`, or `post`.
 
 ## How To Contribute
 

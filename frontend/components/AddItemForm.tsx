@@ -31,12 +31,12 @@ export function AddItemForm({ onCreate }: Props) {
     <form className="add-form" onSubmit={handleSubmit}>
       <div className="field-row">
         <label className="field grow">
-          <span>URL</span>
+          <span>URL or share text</span>
           <input
             required
-            type="url"
+            type="text"
             value={url}
-            placeholder="https://example.com/article"
+            placeholder="Paste a URL, Xiaohongshu/Douyin share text, profile, or collection link"
             onChange={(event) => setUrl(event.target.value)}
           />
         </label>

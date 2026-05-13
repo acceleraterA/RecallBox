@@ -3,12 +3,21 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.share import extract_first_url
 
 
 class ItemCreate(BaseModel):
-    url: HttpUrl
+    url: str = Field(..., max_length=10000)
     note: Optional[str] = Field(default=None, max_length=5000)
+
+    @field_validator("url")
+    @classmethod
+    def must_contain_url(cls, value: str) -> str:
+        if not extract_first_url(value):
+            raise ValueError("Paste a valid URL or share text containing a URL")
+        return value
 
 
 class ItemUpdate(BaseModel):

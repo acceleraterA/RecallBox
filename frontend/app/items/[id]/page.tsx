@@ -110,7 +110,7 @@ export default function ItemDetailPage() {
         {item.description ? <p className="lead">{item.description}</p> : null}
         {item.summary ? <p>{item.summary}</p> : null}
         {item.status === "failed" ? (
-          <p className="error-box">Metadata extraction failed, but the URL was saved.</p>
+          <p className="error-box">Preview unavailable, but the URL was saved.</p>
         ) : null}
       </article>
 

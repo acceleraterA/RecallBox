@@ -7,7 +7,7 @@ def detect_platform(url: str) -> str:
 
     if hostname == "bilibili.com" or hostname.endswith(".bilibili.com"):
         return "bilibili"
-    if hostname == "xiaohongshu.com" or hostname.endswith(".xiaohongshu.com"):
+    if hostname == "xiaohongshu.com" or hostname.endswith(".xiaohongshu.com") or hostname == "xhslink.com":
         return "xiaohongshu"
     if hostname == "douyin.com" or hostname.endswith(".douyin.com"):
         return "douyin"

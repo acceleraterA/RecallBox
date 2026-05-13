@@ -25,7 +25,7 @@ export function ItemCard({ item }: Props) {
         <div className="item-meta">
           <span className="platform">{item.platform}</span>
           <span>{createdAt}</span>
-          {item.status === "failed" ? <span className="status failed">metadata failed</span> : null}
+          {item.status === "failed" ? <span className="status failed">preview unavailable</span> : null}
         </div>
         <Link className="item-title" href={`/items/${item.id}`}>
           {displayTitle}
