@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: recallbox-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: DEFAULT_USER_EMAIL
+        value: demo@recallbox.local
+      - key: ENABLE_LLM
+        value: "false"
+      - key: LLM_API_KEY
+        sync: false

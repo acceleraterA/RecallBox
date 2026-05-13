@@ -1,0 +1,26 @@
+{
+  "name": "recallbox-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "lint": "next lint",
+    "start": "next start"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "dependencies": {
+    "@types/node": "22.10.2",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "next": "^16.2.6",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "5.7.2"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
+  }
+}
