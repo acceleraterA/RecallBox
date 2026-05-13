@@ -22,7 +22,20 @@ class ItemCreate(BaseModel):
 
 class ItemUpdate(BaseModel):
     note: Optional[str] = Field(default=None, max_length=5000)
+    thumbnail_url: Optional[str] = Field(default=None, max_length=2000)
     tags: Optional[list[str]] = None
+
+    @field_validator("thumbnail_url")
+    @classmethod
+    def thumbnail_must_be_url_or_empty(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if not cleaned.startswith(("http://", "https://")):
+            raise ValueError("Thumbnail URL must start with http:// or https://")
+        return cleaned
 
 
 class ItemOut(BaseModel):

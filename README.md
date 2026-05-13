@@ -17,6 +17,7 @@ V1 is intentionally small: one web app, one FastAPI API, one Postgres database, 
 - Filter by platform, tag, and created date range.
 - Open an item detail page.
 - Add or edit notes and tags.
+- Edit an item thumbnail by pasting a custom image URL.
 - Delete saved items.
 - Keep optional LLM summary/tag enrichment disabled behind config.
 - Deploy frontend to Vercel and backend to Render, Railway, or Fly.io.
@@ -224,6 +225,7 @@ DELETE /items/{id}
 ```json
 {
   "note": "updated note",
+  "thumbnail_url": "https://example.com/image.jpg",
   "tags": ["kafka", "interview"]
 }
 ```

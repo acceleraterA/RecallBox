@@ -125,6 +125,8 @@ def update_item(item_id: int, payload: ItemUpdate, db: Session = Depends(get_db)
 
     if "note" in payload.model_fields_set:
         item.note = payload.note
+    if "thumbnail_url" in payload.model_fields_set:
+        item.thumbnail_url = payload.thumbnail_url
     if payload.tags is not None:
         crud.set_item_tags(db, item, payload.tags)
 

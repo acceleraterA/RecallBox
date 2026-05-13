@@ -14,6 +14,7 @@ export default function ItemDetailPage() {
   const id = Number(params.id);
   const [item, setItem] = useState<Item | null>(null);
   const [note, setNote] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [tags, setTags] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -27,6 +28,7 @@ export default function ItemDetailPage() {
         const data = await getItem(id);
         setItem(data);
         setNote(data.note ?? "");
+        setThumbnailUrl(data.thumbnail_url ?? "");
         setTags(data.tags.join(", "));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load item");
@@ -49,9 +51,14 @@ export default function ItemDetailPage() {
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean);
-      const updated = await updateItem(id, { note, tags: nextTags });
+      const updated = await updateItem(id, {
+        note,
+        thumbnail_url: thumbnailUrl.trim() || null,
+        tags: nextTags,
+      });
       setItem(updated);
       setNote(updated.note ?? "");
+      setThumbnailUrl(updated.thumbnail_url ?? "");
       setTags(updated.tags.join(", "));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update item");
@@ -118,6 +125,15 @@ export default function ItemDetailPage() {
         <label className="field">
           <span>Note</span>
           <textarea value={note} onChange={(event) => setNote(event.target.value)} />
+        </label>
+        <label className="field">
+          <span>Thumbnail URL</span>
+          <input
+            type="url"
+            value={thumbnailUrl}
+            placeholder="https://example.com/image.jpg"
+            onChange={(event) => setThumbnailUrl(event.target.value)}
+          />
         </label>
         <TagEditor value={tags} onChange={setTags} />
         {error ? <p className="error-text">{error}</p> : null}
