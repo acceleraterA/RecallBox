@@ -35,12 +35,25 @@ def _serialize_item(item) -> ItemOut:
 
 
 @router.post("", response_model=ItemOut, status_code=status.HTTP_201_CREATED)
-def create_item(payload: ItemCreate, db: Session = Depends(get_db)) -> ItemOut:
+def create_item(payload: ItemCreate, response: Response, db: Session = Depends(get_db)) -> ItemOut:
     user = crud.get_or_create_default_user(db)
     raw_input = payload.url.strip()
     url = extract_first_url(raw_input)
     if not url:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Paste a valid URL")
+
+    existing_item = crud.get_item_by_url(db, user_id=user.id, url=url)
+    if existing_item:
+        if payload.note is not None:
+            existing_item.note = payload.note
+        tags = {tag.name for tag in existing_item.tags}
+        tags.update(inferred_tags(url, raw_input))
+        if tags:
+            crud.set_item_tags(db, existing_item, sorted(tags))
+        db.commit()
+        db.refresh(existing_item)
+        response.status_code = status.HTTP_200_OK
+        return _serialize_item(existing_item)
 
     item = crud.create_item(
         db,
@@ -123,6 +136,8 @@ def update_item(item_id: int, payload: ItemUpdate, db: Session = Depends(get_db)
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
+    if "title" in payload.model_fields_set:
+        item.title = payload.title
     if "note" in payload.model_fields_set:
         item.note = payload.note
     if "thumbnail_url" in payload.model_fields_set:

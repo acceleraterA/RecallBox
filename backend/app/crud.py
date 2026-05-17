@@ -37,6 +37,14 @@ def get_item(db: Session, item_id: int, user_id: int) -> Optional[Item]:
     )
 
 
+def get_item_by_url(db: Session, *, user_id: int, url: str) -> Optional[Item]:
+    return db.scalar(
+        select(Item)
+        .where(Item.user_id == user_id, Item.url == url)
+        .options(selectinload(Item.tags))
+    )
+
+
 def create_item(db: Session, *, user_id: int, url: str, note: Optional[str], platform: str) -> Item:
     item = Item(user_id=user_id, url=url, note=note, platform=platform, status="processing")
     db.add(item)

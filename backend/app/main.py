@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -32,3 +33,12 @@ app.include_router(items_router)
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/debug/cors")
+def debug_cors() -> dict[str, object]:
+    raw_frontend_origin = os.getenv("FRONTEND_ORIGIN")
+    return {
+        "frontend_origin_raw": raw_frontend_origin,
+        "frontend_origins": settings.frontend_origins,
+    }

@@ -10,7 +10,23 @@ type Props = {
   onChange: (filters: ItemFilters) => void;
 };
 
-const platforms = ["", "web", "youtube", "bilibili", "xiaohongshu", "douyin", "wechat_article"];
+const platforms = [
+  "",
+  "web",
+  "youtube",
+  "bilibili",
+  "xiaohongshu",
+  "douyin",
+  "wechat_article",
+  "weibo",
+  "douban",
+  "instagram",
+  "snapchat",
+  "tiktok",
+  "x",
+  "medium",
+  "reddit",
+];
 
 export function SearchFilters({ filters, tags, onChange }: Props) {
   const [q, setQ] = useState(filters.q ?? "");

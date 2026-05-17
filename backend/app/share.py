@@ -56,5 +56,44 @@ def inferred_tags(url: str, raw_text: str) -> list[str]:
             tags.append("collection")
         else:
             tags.append("post")
+    elif "instagram.com" in hostname:
+        if path.startswith("/p/") or path.startswith("/reel/") or path.startswith("/tv/"):
+            tags.append("post")
+        elif path.strip("/"):
+            tags.append("profile")
+    elif "tiktok.com" in hostname:
+        if "/video/" in path:
+            tags.append("post")
+        elif "/@" in path:
+            tags.append("profile")
+    elif hostname in {"x.com", "twitter.com"} or hostname.endswith(".twitter.com"):
+        if "/status/" in path:
+            tags.append("post")
+        elif path.strip("/"):
+            tags.append("profile")
+    elif "reddit.com" in hostname:
+        if "/comments/" in path:
+            tags.append("post")
+        elif path.startswith("/r/"):
+            tags.append("community")
+        elif path.startswith("/user/"):
+            tags.append("profile")
+    elif "douban.com" in hostname:
+        if "/people/" in path:
+            tags.append("profile")
+        elif "/group/" in path:
+            tags.append("community")
+        else:
+            tags.append("post")
+    elif "weibo.com" in hostname or "weibo.cn" in hostname:
+        if path.strip("/"):
+            tags.append("post")
+    elif "youtube.com" in hostname or hostname == "youtu.be":
+        if "/channel/" in path or "/user/" in path or "/@" in path or "/c/" in path:
+            tags.append("profile")
+        elif "list=" in parsed.query:
+            tags.append("collection")
+        else:
+            tags.append("video")
 
     return tags

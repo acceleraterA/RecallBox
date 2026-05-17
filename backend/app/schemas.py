@@ -21,9 +21,18 @@ class ItemCreate(BaseModel):
 
 
 class ItemUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, max_length=500)
     note: Optional[str] = Field(default=None, max_length=5000)
     thumbnail_url: Optional[str] = Field(default=None, max_length=2000)
     tags: Optional[list[str]] = None
+
+    @field_validator("title")
+    @classmethod
+    def title_must_be_clean_or_empty(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = " ".join(value.strip().split())
+        return cleaned or None
 
     @field_validator("thumbnail_url")
     @classmethod

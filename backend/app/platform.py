@@ -1,18 +1,33 @@
 from urllib.parse import urlparse
 
 
+PLATFORM_HOSTS = {
+    "bilibili": ("bilibili.com",),
+    "xiaohongshu": ("xiaohongshu.com", "xhslink.com"),
+    "douyin": ("douyin.com",),
+    "wechat_article": ("mp.weixin.qq.com",),
+    "weibo": ("weibo.com", "weibo.cn"),
+    "douban": ("douban.com",),
+    "instagram": ("instagram.com",),
+    "snapchat": ("snapchat.com",),
+    "tiktok": ("tiktok.com",),
+    "youtube": ("youtube.com", "youtu.be"),
+    "x": ("x.com", "twitter.com"),
+    "medium": ("medium.com",),
+    "reddit": ("reddit.com", "redd.it"),
+}
+
+
+def _matches_host(hostname: str, domains: tuple[str, ...]) -> bool:
+    return any(hostname == domain or hostname.endswith(f".{domain}") for domain in domains)
+
+
 def detect_platform(url: str) -> str:
     hostname = (urlparse(url).hostname or "").lower()
     hostname = hostname.removeprefix("www.")
 
-    if hostname == "bilibili.com" or hostname.endswith(".bilibili.com"):
-        return "bilibili"
-    if hostname == "xiaohongshu.com" or hostname.endswith(".xiaohongshu.com") or hostname == "xhslink.com":
-        return "xiaohongshu"
-    if hostname == "douyin.com" or hostname.endswith(".douyin.com"):
-        return "douyin"
-    if hostname == "mp.weixin.qq.com":
-        return "wechat_article"
-    if hostname == "youtube.com" or hostname.endswith(".youtube.com") or hostname == "youtu.be":
-        return "youtube"
+    for platform, domains in PLATFORM_HOSTS.items():
+        if _matches_host(hostname, domains):
+            return platform
+
     return "web"

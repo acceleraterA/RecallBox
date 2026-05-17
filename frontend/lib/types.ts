@@ -29,6 +29,7 @@ export type CreateItemInput = {
 };
 
 export type UpdateItemInput = {
+  title?: string | null;
   note?: string | null;
   thumbnail_url?: string | null;
   tags?: string[];

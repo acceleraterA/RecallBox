@@ -8,15 +8,16 @@ V1 is intentionally small: one web app, one FastAPI API, one Postgres database, 
 
 - Save links manually with an optional note.
 - Paste platform share text that contains a URL; RecallBox extracts the first URL automatically.
-- Detect platform from URL, including YouTube, Bilibili, Xiaohongshu, Douyin, WeChat articles, and generic web pages.
-- Auto-tag Xiaohongshu and Douyin saves as `post`, `profile`, or `collection` when the URL/share text makes that clear.
+- Detect platform from URL, including YouTube, Bilibili, Xiaohongshu, Douyin, WeChat articles, Weibo, Douban, Instagram, Snapchat, TikTok, X, Medium, Reddit, and generic web pages.
+- Auto-tag common platform saves as `post`, `profile`, `collection`, `community`, or `video` when the URL/share text makes that clear.
+- Avoid duplicate saves by returning the existing item when the same URL is saved again.
 - Extract basic metadata with Open Graph tags first: title, description, and thumbnail.
 - Save URLs even when metadata extraction fails, with `status="failed"`.
 - View all saved items.
 - Search by keyword across URL, title, description, summary, note, and tag names.
 - Filter by platform, tag, and created date range.
 - Open an item detail page.
-- Add or edit notes and tags.
+- Add or edit title, notes, and tags.
 - Edit an item thumbnail by pasting a custom image URL.
 - Delete saved items.
 - Keep optional LLM summary/tag enrichment disabled behind config.
@@ -224,6 +225,7 @@ DELETE /items/{id}
 
 ```json
 {
+  "title": "Clear custom title",
   "note": "updated note",
   "thumbnail_url": "https://example.com/image.jpg",
   "tags": ["kafka", "interview"]

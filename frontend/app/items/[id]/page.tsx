@@ -13,6 +13,7 @@ export default function ItemDetailPage() {
   const router = useRouter();
   const id = Number(params.id);
   const [item, setItem] = useState<Item | null>(null);
+  const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [tags, setTags] = useState("");
@@ -27,6 +28,7 @@ export default function ItemDetailPage() {
       try {
         const data = await getItem(id);
         setItem(data);
+        setTitle(data.title ?? "");
         setNote(data.note ?? "");
         setThumbnailUrl(data.thumbnail_url ?? "");
         setTags(data.tags.join(", "));
@@ -52,11 +54,13 @@ export default function ItemDetailPage() {
         .map((tag) => tag.trim())
         .filter(Boolean);
       const updated = await updateItem(id, {
+        title: title.trim() || null,
         note,
         thumbnail_url: thumbnailUrl.trim() || null,
         tags: nextTags,
       });
       setItem(updated);
+      setTitle(updated.title ?? "");
       setNote(updated.note ?? "");
       setThumbnailUrl(updated.thumbnail_url ?? "");
       setTags(updated.tags.join(", "));
@@ -122,6 +126,14 @@ export default function ItemDetailPage() {
       </article>
 
       <form className="panel edit-form" onSubmit={handleSave}>
+        <label className="field">
+          <span>Title</span>
+          <input
+            value={title}
+            placeholder="Add a clearer title"
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </label>
         <label className="field">
           <span>Note</span>
           <textarea value={note} onChange={(event) => setNote(event.target.value)} />
