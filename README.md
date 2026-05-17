@@ -268,6 +268,7 @@ V1:
 
 V1.5:
 
+- Add account authentication and move from the default demo user to real per-user saved items.
 - Add optional semantic search using embeddings.
 - Use `pgvector` with Postgres.
 - Generate embeddings for title, description, note, and tags.
