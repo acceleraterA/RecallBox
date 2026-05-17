@@ -359,11 +359,14 @@ button:disabled {
 
   .item-card {
     grid-template-columns: 1fr;
+    min-height: 0;
   }
 
   .item-thumbnail {
-    aspect-ratio: 16 / 9;
+    display: block;
+    height: clamp(150px, 48vw, 220px);
     min-height: 0;
+    aspect-ratio: 16 / 9;
   }
 
   .item-content {
