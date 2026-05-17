@@ -13,17 +13,23 @@ export default function HomePage() {
   const [tags, setTags] = useState<string[]>([]);
   const [filters, setFilters] = useState<ItemFilters>({});
   const [loading, setLoading] = useState(true);
+  const [slowLoading, setSlowLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadItems = useCallback(async (nextFilters = filters) => {
     setLoading(true);
+    setSlowLoading(false);
     setError(null);
+    const slowLoadingTimer = window.setTimeout(() => setSlowLoading(true), 1200);
+
     try {
       const data = await getItems({ ...nextFilters, limit: 50, offset: 0 });
       setItems(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load items");
     } finally {
+      window.clearTimeout(slowLoadingTimer);
+      setSlowLoading(false);
       setLoading(false);
     }
   }, [filters]);
@@ -70,7 +76,7 @@ export default function HomePage() {
         <SearchFilters filters={filters} tags={tags} onChange={handleFiltersChange} />
 
         {error ? <p className="error-box">{error}</p> : null}
-        {loading ? <p className="muted">Loading saved links...</p> : null}
+        {loading ? <p className="muted">{slowLoading ? "Waking up RecallBox API..." : "Loading saved links..."}</p> : null}
 
         {!loading && !error && items.length === 0 ? (
           <div className="empty-state">
