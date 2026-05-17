@@ -318,11 +318,43 @@ button:disabled {
 }
 
 @media (max-width: 720px) {
+  .shell,
+  .shell.narrow {
+    width: min(100% - 20px, 1120px);
+    padding: 22px 0 44px;
+  }
+
+  .topbar {
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    font-size: 2rem;
+    line-height: 1.08;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
   .field-row,
   .filters,
   .actions {
     align-items: stretch;
     flex-direction: column;
+    gap: 10px;
+  }
+
+  .field.grow,
+  .field.compact {
+    flex: none;
+    width: 100%;
+  }
+
+  .field-row button,
+  .filters button,
+  .actions button {
+    width: 100%;
   }
 
   .item-card {
@@ -332,5 +364,22 @@ button:disabled {
   .item-thumbnail {
     aspect-ratio: 16 / 9;
     min-height: 0;
+  }
+
+  .item-content {
+    padding: 14px;
+  }
+
+  .item-meta,
+  .tag-row {
+    gap: 6px;
+  }
+
+  .empty-state {
+    padding: 24px 16px;
+  }
+
+  .detail {
+    padding: 16px;
   }
 }
