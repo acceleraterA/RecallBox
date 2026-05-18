@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { AddItemForm } from "@/components/AddItemForm";
+import { AccountBar, AuthPanel } from "@/components/AuthPanel";
 import { ItemCard } from "@/components/ItemCard";
 import { SearchFilters } from "@/components/SearchFilters";
 import { createItem, getItems, getTags } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import type { Item, ItemFilters } from "@/lib/types";
 
 export default function HomePage() {
+  const { authReady, isAuthEnabled, session } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [filters, setFilters] = useState<ItemFilters>({});
@@ -44,9 +47,20 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (!authReady) {
+      return;
+    }
+
+    if (isAuthEnabled && !session) {
+      setItems([]);
+      setTags([]);
+      setLoading(false);
+      return;
+    }
+
     loadItems();
     loadTags();
-  }, [loadItems, loadTags]);
+  }, [authReady, isAuthEnabled, session, loadItems, loadTags]);
 
   async function handleCreate(input: { url: string; note?: string }) {
     await createItem(input);
@@ -66,12 +80,20 @@ export default function HomePage() {
           <p className="eyebrow">RecallBox</p>
           <h1>Saved links, ready when your memory is not.</h1>
         </div>
+        <AccountBar />
       </header>
 
-      <section className="panel">
-        <AddItemForm onCreate={handleCreate} />
-      </section>
+      {!authReady ? <p className="muted">Checking account...</p> : null}
 
+      {authReady && isAuthEnabled && !session ? <AuthPanel /> : null}
+
+      {authReady && (!isAuthEnabled || session) ? (
+        <section className="panel">
+          <AddItemForm onCreate={handleCreate} />
+        </section>
+      ) : null}
+
+      {authReady && (!isAuthEnabled || session) ? (
       <section className="list-section">
         <SearchFilters filters={filters} tags={tags} onChange={handleFiltersChange} />
 
@@ -91,6 +113,7 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+      ) : null}
     </main>
   );
 }

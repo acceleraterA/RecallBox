@@ -11,8 +11,9 @@ from app.routers.items import router as items_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    with SessionLocal() as db:
-        crud.get_or_create_default_user(db)
+    if not settings.enable_auth:
+        with SessionLocal() as db:
+            crud.get_or_create_default_user(db)
     yield
 
 

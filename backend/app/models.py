@@ -19,9 +19,14 @@ item_tags = Table(
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("auth_provider", "auth_subject", name="uq_users_auth_identity"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    auth_provider: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    auth_subject: Mapped[Optional[str]] = mapped_column(String(255), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     items: Mapped[list["Item"]] = relationship(back_populates="user", cascade="all, delete-orphan")

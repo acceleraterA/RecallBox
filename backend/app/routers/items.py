@@ -7,10 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app import crud
+from app.auth import get_current_user
 from app.database import get_db
 from app.llm import generate_enrichment
 from app.metadata import extract_metadata
 from app.platform import detect_platform
+from app.models import User
 from app.schemas import ItemCreate, ItemOut, ItemUpdate
 from app.share import extract_first_url, inferred_tags, title_from_share_text
 
@@ -35,8 +37,12 @@ def _serialize_item(item) -> ItemOut:
 
 
 @router.post("", response_model=ItemOut, status_code=status.HTTP_201_CREATED)
-def create_item(payload: ItemCreate, response: Response, db: Session = Depends(get_db)) -> ItemOut:
-    user = crud.get_or_create_default_user(db)
+def create_item(
+    payload: ItemCreate,
+    response: Response,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> ItemOut:
     raw_input = payload.url.strip()
     url = extract_first_url(raw_input)
     if not url:
@@ -98,8 +104,8 @@ def list_items(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> list[ItemOut]:
-    user = crud.get_or_create_default_user(db)
     items = crud.list_items(
         db,
         user_id=user.id,
@@ -115,14 +121,19 @@ def list_items(
 
 
 @router.get("/tags", response_model=list[str])
-def list_tags(db: Session = Depends(get_db)) -> list[str]:
-    user = crud.get_or_create_default_user(db)
+def list_tags(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> list[str]:
     return crud.list_tags(db, user_id=user.id)
 
 
 @router.get("/{item_id}", response_model=ItemOut)
-def get_item(item_id: int, db: Session = Depends(get_db)) -> ItemOut:
-    user = crud.get_or_create_default_user(db)
+def get_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> ItemOut:
     item = crud.get_item(db, item_id=item_id, user_id=user.id)
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
@@ -130,8 +141,12 @@ def get_item(item_id: int, db: Session = Depends(get_db)) -> ItemOut:
 
 
 @router.patch("/{item_id}", response_model=ItemOut)
-def update_item(item_id: int, payload: ItemUpdate, db: Session = Depends(get_db)) -> ItemOut:
-    user = crud.get_or_create_default_user(db)
+def update_item(
+    item_id: int,
+    payload: ItemUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> ItemOut:
     item = crud.get_item(db, item_id=item_id, user_id=user.id)
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
@@ -151,8 +166,11 @@ def update_item(item_id: int, payload: ItemUpdate, db: Session = Depends(get_db)
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_item(item_id: int, db: Session = Depends(get_db)) -> Response:
-    user = crud.get_or_create_default_user(db)
+def delete_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Response:
     item = crud.get_item(db, item_id=item_id, user_id=user.id)
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")

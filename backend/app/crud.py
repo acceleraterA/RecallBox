@@ -29,6 +29,40 @@ def get_or_create_default_user(db: Session) -> User:
     return user
 
 
+def get_or_create_auth_user(
+    db: Session,
+    *,
+    provider: str,
+    subject: str,
+    email: Optional[str],
+) -> User:
+    user = db.scalar(
+        select(User).where(User.auth_provider == provider, User.auth_subject == subject)
+    )
+    normalized_email = email or f"{provider}:{subject}@recallbox.local"
+
+    if user:
+        if user.email != normalized_email:
+            user.email = normalized_email
+            db.commit()
+            db.refresh(user)
+        return user
+
+    user = db.scalar(select(User).where(User.email == normalized_email))
+    if user:
+        user.auth_provider = provider
+        user.auth_subject = subject
+        db.commit()
+        db.refresh(user)
+        return user
+
+    user = User(email=normalized_email, auth_provider=provider, auth_subject=subject)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def get_item(db: Session, item_id: int, user_id: int) -> Optional[Item]:
     return db.scalar(
         select(Item)

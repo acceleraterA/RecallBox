@@ -4,11 +4,14 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
+import { AuthPanel } from "@/components/AuthPanel";
 import { TagEditor } from "@/components/TagEditor";
 import { deleteItem, getItem, updateItem } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import type { Item } from "@/lib/types";
 
 export default function ItemDetailPage() {
+  const { authReady, isAuthEnabled, session } = useAuth();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = Number(params.id);
@@ -39,10 +42,20 @@ export default function ItemDetailPage() {
       }
     }
 
+    if (!authReady) {
+      return;
+    }
+
+    if (isAuthEnabled && !session) {
+      setItem(null);
+      setLoading(false);
+      return;
+    }
+
     if (Number.isFinite(id)) {
       loadItem();
     }
-  }, [id]);
+  }, [authReady, id, isAuthEnabled, session]);
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -83,10 +96,21 @@ export default function ItemDetailPage() {
     }
   }
 
-  if (loading) {
+  if (!authReady || loading) {
     return (
       <main className="shell narrow">
-        <p className="muted">Loading item...</p>
+        <p className="muted">{!authReady ? "Checking account..." : "Loading item..."}</p>
+      </main>
+    );
+  }
+
+  if (isAuthEnabled && !session) {
+    return (
+      <main className="shell narrow">
+        <Link className="back-link" href="/">
+          Back
+        </Link>
+        <AuthPanel />
       </main>
     );
   }

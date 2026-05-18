@@ -2,6 +2,11 @@ import type { CreateItemInput, Item, ItemFilters, UpdateItemInput } from "./type
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 const API_TIMEOUT_MS = 30000;
+let apiAccessToken: string | null = null;
+
+export function setApiAccessToken(token: string | null) {
+  apiAccessToken = token;
+}
 
 function errorMessage(body: unknown): string {
   if (!body || typeof body !== "object") {
@@ -37,6 +42,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
+        ...(apiAccessToken ? { Authorization: `Bearer ${apiAccessToken}` } : {}),
         ...(init?.headers ?? {}),
       },
     });

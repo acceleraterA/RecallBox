@@ -37,6 +37,9 @@ class Settings:
     database_url: str = field(default_factory=_database_url)
     frontend_origins: list[str] = field(default_factory=_origins)
     default_user_email: str = os.getenv("DEFAULT_USER_EMAIL", "demo@recallbox.local")
+    enable_auth: bool = _env_bool("ENABLE_AUTH", False)
+    supabase_url: Optional[str] = os.getenv("SUPABASE_URL")
+    supabase_anon_key: Optional[str] = os.getenv("SUPABASE_ANON_KEY")
     enable_llm: bool = _env_bool("ENABLE_LLM", False)
     llm_api_key: Optional[str] = os.getenv("LLM_API_KEY")
 

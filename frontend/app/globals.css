@@ -276,6 +276,34 @@ button:disabled {
   color: var(--danger);
 }
 
+.auth-panel {
+  display: grid;
+  gap: 18px;
+  max-width: 520px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.account-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.account-bar .ghost-button {
+  min-height: 36px;
+}
+
+.success-text {
+  color: var(--accent-dark);
+}
+
 .error-box {
   border: 1px solid #f1b4ae;
   border-radius: 8px;
@@ -335,6 +363,11 @@ button:disabled {
 
   .panel {
     padding: 14px;
+  }
+
+  .account-bar {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .field-row,

@@ -27,6 +27,7 @@ V1 is intentionally small: one web app, one FastAPI API, one Postgres database, 
 
 - Frontend: Next.js + TypeScript
 - Backend: FastAPI + Python
+- Auth: Supabase Auth, optional for local development
 - Database: Postgres
 - ORM: SQLAlchemy
 - Migrations: Alembic
@@ -100,6 +101,9 @@ Backend, stored locally in `backend/.env`:
 DATABASE_URL=postgresql+psycopg://recallbox:recallbox@localhost:5433/recallbox
 FRONTEND_ORIGIN=http://localhost:3000,http://127.0.0.1:3000
 DEFAULT_USER_EMAIL=demo@recallbox.local
+ENABLE_AUTH=false
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
 ENABLE_LLM=false
 LLM_API_KEY=
 ```
@@ -108,15 +112,41 @@ Frontend, stored locally in `frontend/.env.local`:
 
 ```bash
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-Use a comma-separated `FRONTEND_ORIGIN` value if more than one frontend origin should be allowed. Do not commit `.env`, `.env.local`, API keys, database credentials, or provider secrets. The included `.env.example` files are safe templates only.
+Use a comma-separated `FRONTEND_ORIGIN` value if more than one frontend origin should be allowed. Leave `ENABLE_AUTH=false` for local demo mode, or set `ENABLE_AUTH=true` with Supabase values to require accounts. Do not commit `.env`, `.env.local`, API keys, database credentials, or provider secrets. The included `.env.example` files are safe templates only.
 
 ## Database Setup
 
 Local development uses the Postgres service in `docker-compose.yml`.
 
 For deployment, create a managed Postgres database with Neon, Supabase, Railway Postgres, Render Postgres, Fly Postgres, or another provider. Copy the provider connection string into the backend host as `DATABASE_URL`.
+
+## Auth Setup
+
+RecallBox v1.5 supports Supabase Auth. Local development can still run in demo mode with `ENABLE_AUTH=false`.
+
+To enable auth:
+
+1. Create a Supabase project.
+2. In Supabase Auth, enable email/password signups.
+3. Copy the project URL and anon/publishable key.
+4. Backend env:
+   ```bash
+   ENABLE_AUTH=true
+   SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+   SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY
+   ```
+5. Frontend env:
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY
+   ```
+
+When auth is enabled, the frontend sends the Supabase access token to FastAPI using `Authorization: Bearer ...`. The backend verifies the session with Supabase and stores items under the matching local user.
+
 
 For Neon and other SSL-required providers, the value often looks like:
 
@@ -154,10 +184,11 @@ Vercel deployment from GitHub:
 2. Import the repo in Vercel.
 3. Set the Vercel project root directory to `frontend`.
 4. Set `NEXT_PUBLIC_API_BASE_URL` to your deployed backend URL, for example `https://recallbox-api.onrender.com`.
-5. Keep the default install/build commands:
+5. If auth is enabled, set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+6. Keep the default install/build commands:
    - Install: `npm install`
    - Build: `npm run build`
-6. Deploy.
+7. Deploy.
 
 After the backend is deployed, update `FRONTEND_ORIGIN` on the backend host to your Vercel URL, for example `https://your-project.vercel.app`.
 
@@ -169,9 +200,14 @@ The backend must receive these environment variables from the hosting provider:
 DATABASE_URL=postgresql+psycopg://...
 FRONTEND_ORIGIN=https://your-project.vercel.app
 DEFAULT_USER_EMAIL=demo@recallbox.local
+ENABLE_AUTH=true
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY
 ENABLE_LLM=false
 LLM_API_KEY=
 ```
+
+Use `ENABLE_AUTH=false` only for demo/local deployments that should use the single default user.
 
 Render option:
 
@@ -268,7 +304,7 @@ V1:
 
 V1.5:
 
-- Add account authentication and move from the default demo user to real per-user saved items.
+- Add account authentication and move from the default demo user to real per-user saved items. In progress with Supabase Auth.
 - Add optional semantic search using embeddings.
 - Use `pgvector` with Postgres.
 - Generate embeddings for title, description, note, and tags.
