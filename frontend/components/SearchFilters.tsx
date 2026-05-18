@@ -10,6 +10,8 @@ type Props = {
   onChange: (filters: ItemFilters) => void;
 };
 
+const commonTags = ["post", "profile", "collection", "community", "video"];
+
 const platforms = [
   "",
   "web",
@@ -29,6 +31,21 @@ const platforms = [
 ];
 
 export function SearchFilters({ filters, tags, onChange }: Props) {
+  const tagOptions = Array.from(new Set([...commonTags, ...tags])).sort((left, right) => {
+    const leftCommonIndex = commonTags.indexOf(left);
+    const rightCommonIndex = commonTags.indexOf(right);
+
+    if (leftCommonIndex >= 0 && rightCommonIndex >= 0) {
+      return leftCommonIndex - rightCommonIndex;
+    }
+    if (leftCommonIndex >= 0) {
+      return -1;
+    }
+    if (rightCommonIndex >= 0) {
+      return 1;
+    }
+    return left.localeCompare(right);
+  });
   const [q, setQ] = useState(filters.q ?? "");
   const [platform, setPlatform] = useState(filters.platform ?? "");
   const [tag, setTag] = useState(filters.tag ?? "");
@@ -79,7 +96,7 @@ export function SearchFilters({ filters, tags, onChange }: Props) {
         <span>Tag</span>
         <select value={tag} onChange={(event) => setTag(event.target.value)}>
           <option value="">All</option>
-          {tags.map((value) => (
+          {tagOptions.map((value) => (
             <option key={value} value={value}>
               {value}
             </option>
