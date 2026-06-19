@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app import crud
 from app.auth import get_current_user
 from app.database import get_db
+from app.embeddings import build_item_embedding_text, generate_embedding
 from app.llm import generate_enrichment
 from app.metadata import extract_metadata
 from app.platform import detect_platform
@@ -17,6 +18,15 @@ from app.schemas import ItemCreate, ItemOut, ItemUpdate
 from app.share import extract_first_url, inferred_tags, title_from_share_text
 
 router = APIRouter(prefix="/items", tags=["items"])
+
+
+def _refresh_item_embedding(db: Session, item) -> None:
+    tag_names = [tag.name for tag in item.tags]
+    embedding_text = build_item_embedding_text(item, tag_names)
+    crud.set_item_embedding_text(db, item=item, embedding_text=embedding_text)
+    embedding = generate_embedding(embedding_text)
+    if embedding:
+        crud.set_item_embedding(db, item=item, embedding_text=embedding_text, embedding=embedding)
 
 
 def _serialize_item(item) -> ItemOut:
@@ -56,6 +66,7 @@ def create_item(
         tags.update(inferred_tags(url, raw_input))
         if tags:
             crud.set_item_tags(db, existing_item, sorted(tags))
+        _refresh_item_embedding(db, existing_item)
         db.commit()
         db.refresh(existing_item)
         response.status_code = status.HTTP_200_OK
@@ -88,6 +99,7 @@ def create_item(
         tags.extend(enrichment.tags)
     if tags:
         crud.set_item_tags(db, item, tags)
+    _refresh_item_embedding(db, item)
 
     db.commit()
     db.refresh(item)
@@ -101,22 +113,37 @@ def list_items(
     tag: Optional[str] = None,
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
+    semantic: bool = Query(default=False),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> list[ItemOut]:
-    items = crud.list_items(
-        db,
-        user_id=user.id,
-        q=q,
-        platform=platform,
-        tag=tag,
-        date_from=date_from,
-        date_to=date_to,
-        limit=limit,
-        offset=offset,
-    )
+    query_embedding = generate_embedding(q or "", is_query=True) if semantic and q else None
+    if query_embedding and crud.has_embedding_storage(db):
+        items = crud.list_items_semantic(
+            db,
+            user_id=user.id,
+            query_embedding=query_embedding,
+            platform=platform,
+            tag=tag,
+            date_from=date_from,
+            date_to=date_to,
+            limit=limit,
+            offset=offset,
+        )
+    else:
+        items = crud.list_items(
+            db,
+            user_id=user.id,
+            q=q,
+            platform=platform,
+            tag=tag,
+            date_from=date_from,
+            date_to=date_to,
+            limit=limit,
+            offset=offset,
+        )
     return [_serialize_item(item) for item in items]
 
 
@@ -159,6 +186,7 @@ def update_item(
         item.thumbnail_url = payload.thumbnail_url
     if payload.tags is not None:
         crud.set_item_tags(db, item, payload.tags)
+    _refresh_item_embedding(db, item)
 
     db.commit()
     db.refresh(item)

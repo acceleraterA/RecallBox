@@ -19,6 +19,7 @@ export type ItemFilters = {
   tag?: string;
   date_from?: string;
   date_to?: string;
+  semantic?: boolean;
   limit?: number;
   offset?: number;
 };

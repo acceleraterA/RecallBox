@@ -1,6 +1,8 @@
 alembic==1.14.0
 beautifulsoup4==4.12.3
 fastapi==0.115.6
+huggingface_hub==1.8.0
+numpy==1.26.4
 psycopg[binary]==3.2.13
 pydantic==2.10.4
 python-dotenv==1.0.1

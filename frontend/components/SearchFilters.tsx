@@ -51,6 +51,7 @@ export function SearchFilters({ filters, tags, onChange }: Props) {
   const [tag, setTag] = useState(filters.tag ?? "");
   const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
   const [dateTo, setDateTo] = useState(filters.date_to ?? "");
+  const [semantic, setSemantic] = useState(Boolean(filters.semantic));
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,6 +61,7 @@ export function SearchFilters({ filters, tags, onChange }: Props) {
       tag: tag.trim(),
       date_from: dateFrom,
       date_to: dateTo,
+      semantic: semantic || undefined,
     });
   }
 
@@ -69,6 +71,7 @@ export function SearchFilters({ filters, tags, onChange }: Props) {
     setTag("");
     setDateFrom("");
     setDateTo("");
+    setSemantic(false);
     onChange({});
   }
 
@@ -111,6 +114,13 @@ export function SearchFilters({ filters, tags, onChange }: Props) {
         <span>To</span>
         <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
       </label>
+      <div className="field check-field">
+        <span>Mode</span>
+        <label className="inline-check">
+          <input type="checkbox" checked={semantic} onChange={(event) => setSemantic(event.target.checked)} />
+          Semantic
+        </label>
+      </div>
       <button className="secondary-button" type="submit">
         Apply
       </button>

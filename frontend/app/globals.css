@@ -105,6 +105,29 @@ h2 {
   flex: 0 1 180px;
 }
 
+.check-field {
+  flex: 0 1 128px;
+}
+
+.inline-check {
+  align-items: center;
+  background: #fffdf8;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  display: flex;
+  font-size: 0.95rem;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.inline-check input {
+  margin: 0;
+  padding: 0;
+  width: auto;
+}
+
 .field span {
   color: var(--muted);
   font-size: 0.82rem;

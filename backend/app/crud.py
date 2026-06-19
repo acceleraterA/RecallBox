@@ -3,10 +3,11 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta
 from typing import Optional
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session, selectinload
 
 from app.config import settings
+from app.embeddings import EmbeddingResult, format_vector
 from app.models import Item, Tag, User
 
 
@@ -180,3 +181,158 @@ def list_tags(db: Session, *, user_id: int) -> list[str]:
 
 def delete_item(db: Session, item: Item) -> None:
     db.delete(item)
+
+
+def has_embedding_storage(db: Session) -> bool:
+    return bool(
+        db.scalar(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'items' AND column_name = 'embedding'
+                )
+                """
+            )
+        )
+    )
+
+
+def set_item_embedding_text(db: Session, *, item: Item, embedding_text: str) -> None:
+    item.embedding_text = embedding_text
+    item.embedding_provider = None
+    item.embedding_model = None
+    item.embedding_dimensions = None
+
+    if has_embedding_storage(db):
+        db.execute(
+            text(
+                """
+                UPDATE items
+                SET embedding_text = :embedding_text,
+                    embedding = NULL,
+                    embedding_provider = NULL,
+                    embedding_model = NULL,
+                    embedding_dimensions = NULL
+                WHERE id = :item_id
+                """
+            ),
+            {"item_id": item.id, "embedding_text": embedding_text},
+        )
+
+
+def set_item_embedding(
+    db: Session,
+    *,
+    item: Item,
+    embedding_text: str,
+    embedding: EmbeddingResult,
+) -> None:
+    if not has_embedding_storage(db):
+        item.embedding_text = embedding_text
+        return
+
+    db.execute(
+        text(
+            """
+            UPDATE items
+            SET embedding_text = :embedding_text,
+                embedding = CAST(:embedding AS vector),
+                embedding_provider = :embedding_provider,
+                embedding_model = :embedding_model,
+                embedding_dimensions = :embedding_dimensions
+            WHERE id = :item_id
+            """
+        ),
+        {
+            "item_id": item.id,
+            "embedding_text": embedding_text,
+            "embedding": format_vector(embedding.values),
+            "embedding_provider": embedding.provider,
+            "embedding_model": embedding.model,
+            "embedding_dimensions": embedding.dimensions,
+        },
+    )
+    item.embedding_text = embedding_text
+    item.embedding_provider = embedding.provider
+    item.embedding_model = embedding.model
+    item.embedding_dimensions = embedding.dimensions
+
+
+def list_items_semantic(
+    db: Session,
+    *,
+    user_id: int,
+    query_embedding: EmbeddingResult,
+    platform: Optional[str] = None,
+    tag: Optional[str] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Item]:
+    where_clauses = [
+        "i.user_id = :user_id",
+        "i.embedding IS NOT NULL",
+        "i.embedding_provider = :embedding_provider",
+        "i.embedding_model = :embedding_model",
+        "i.embedding_dimensions = :embedding_dimensions",
+        "1 - (i.embedding <=> CAST(:query_embedding AS vector)) >= :min_similarity",
+    ]
+    params: dict[str, object] = {
+        "user_id": user_id,
+        "query_embedding": format_vector(query_embedding.values),
+        "embedding_provider": query_embedding.provider,
+        "embedding_model": query_embedding.model,
+        "embedding_dimensions": query_embedding.dimensions,
+        "min_similarity": settings.embedding_min_similarity,
+        "limit": limit,
+        "offset": offset,
+    }
+
+    if platform:
+        where_clauses.append("i.platform = :platform")
+        params["platform"] = platform
+
+    normalized_tag = normalize_tag(tag) if tag else None
+    if normalized_tag:
+        where_clauses.append(
+            """
+            EXISTS (
+                SELECT 1
+                FROM item_tags it
+                JOIN tags t ON t.id = it.tag_id
+                WHERE it.item_id = i.id AND t.name = :tag
+            )
+            """
+        )
+        params["tag"] = normalized_tag
+
+    if date_from:
+        where_clauses.append("i.created_at >= :date_from")
+        params["date_from"] = datetime.combine(date_from, time.min)
+    if date_to:
+        where_clauses.append("i.created_at < :date_to")
+        params["date_to"] = datetime.combine(date_to + timedelta(days=1), time.min)
+
+    statement = text(
+        f"""
+        SELECT i.id
+        FROM items i
+        WHERE {' AND '.join(where_clauses)}
+        ORDER BY i.embedding <=> CAST(:query_embedding AS vector)
+        LIMIT :limit OFFSET :offset
+        """
+    )
+    ids = [row.id for row in db.execute(statement, params).all()]
+    if not ids:
+        return []
+
+    items = db.scalars(
+        select(Item)
+        .where(Item.id.in_(ids), Item.user_id == user_id)
+        .options(selectinload(Item.tags))
+    ).all()
+    by_id = {item.id: item for item in items}
+    return [by_id[item_id] for item_id in ids if item_id in by_id]

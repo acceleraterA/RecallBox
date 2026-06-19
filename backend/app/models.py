@@ -44,6 +44,10 @@ class Item(Base):
     summary: Mapped[Optional[str]] = mapped_column(Text)
     note: Mapped[Optional[str]] = mapped_column(Text)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(Text)
+    embedding_text: Mapped[Optional[str]] = mapped_column(Text)
+    embedding_provider: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    embedding_model: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+    embedding_dimensions: Mapped[Optional[int]] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="processing", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at: Mapped[datetime] = mapped_column(
