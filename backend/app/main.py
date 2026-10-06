@@ -6,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import crud
 from app.config import settings
 from app.database import SessionLocal
+from app.routers.agent import router as agent_router
 from app.routers.items import router as items_router
+from app.routers.rag import router as rag_router
 
 
 @asynccontextmanager
@@ -17,7 +19,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="RecallBox API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="RecallBox API", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,6 +30,8 @@ app.add_middleware(
 )
 
 app.include_router(items_router)
+app.include_router(rag_router)
+app.include_router(agent_router)
 
 
 @app.get("/health")

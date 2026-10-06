@@ -1,4 +1,4 @@
-import type { CreateItemInput, Item, ItemFilters, UpdateItemInput } from "./types";
+import type { AgentChatInput, AgentChatResponse, CreateItemInput, Item, ItemFilters, RagAnswer, RagAskInput, UpdateItemInput } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 const API_TIMEOUT_MS = 30000;
@@ -111,5 +111,20 @@ export async function updateItem(id: number, input: UpdateItemInput): Promise<It
 export async function deleteItem(id: number): Promise<void> {
   await apiRequest<void>(`/items/${id}`, {
     method: "DELETE",
+  });
+}
+
+export async function askRecallBox(input: RagAskInput): Promise<RagAnswer> {
+  return apiRequest<RagAnswer>("/rag/ask", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+
+export async function askAgent(input: AgentChatInput): Promise<AgentChatResponse> {
+  return apiRequest<AgentChatResponse>("/agent/chat", {
+    method: "POST",
+    body: JSON.stringify(input),
   });
 }

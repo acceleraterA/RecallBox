@@ -13,6 +13,7 @@ from app.embeddings import build_item_embedding_text, generate_embedding
 from app.llm import generate_enrichment
 from app.metadata import extract_metadata
 from app.platform import detect_platform
+from app.rag import index_item_content
 from app.models import User
 from app.schemas import ItemCreate, ItemOut, ItemUpdate
 from app.share import extract_first_url, inferred_tags, title_from_share_text
@@ -39,6 +40,7 @@ def _serialize_item(item) -> ItemOut:
         summary=item.summary,
         note=item.note,
         thumbnail_url=item.thumbnail_url,
+        content_status=item.content_status,
         status=item.status,
         tags=[tag.name for tag in sorted(item.tags, key=lambda tag: tag.name)],
         created_at=item.created_at,
@@ -60,13 +62,24 @@ def create_item(
 
     existing_item = crud.get_item_by_url(db, user_id=user.id, url=url)
     if existing_item:
+        should_reindex = payload.note is not None or existing_item.content_status != "ready"
         if payload.note is not None:
             existing_item.note = payload.note
+        if not existing_item.content_text:
+            metadata = extract_metadata(url)
+            existing_item.content_text = metadata.content_text
+            if not existing_item.title:
+                existing_item.title = metadata.title
+            if not existing_item.description:
+                existing_item.description = metadata.description
+            should_reindex = True
         tags = {tag.name for tag in existing_item.tags}
         tags.update(inferred_tags(url, raw_input))
         if tags:
             crud.set_item_tags(db, existing_item, sorted(tags))
         _refresh_item_embedding(db, existing_item)
+        if should_reindex:
+            index_item_content(db, existing_item)
         db.commit()
         db.refresh(existing_item)
         response.status_code = status.HTTP_200_OK
@@ -84,6 +97,7 @@ def create_item(
     item.title = metadata.title
     item.description = metadata.description
     item.thumbnail_url = metadata.thumbnail_url
+    item.content_text = metadata.content_text
     item.status = "failed" if metadata.error else "ready"
     if not item.title:
         item.title = title_from_share_text(raw_input, url)
@@ -100,6 +114,7 @@ def create_item(
     if tags:
         crud.set_item_tags(db, item, tags)
     _refresh_item_embedding(db, item)
+    index_item_content(db, item)
 
     db.commit()
     db.refresh(item)
@@ -178,6 +193,7 @@ def update_item(
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
+    should_reindex = bool({"title", "note", "tags"} & payload.model_fields_set)
     if "title" in payload.model_fields_set:
         item.title = payload.title
     if "note" in payload.model_fields_set:
@@ -187,6 +203,8 @@ def update_item(
     if payload.tags is not None:
         crud.set_item_tags(db, item, payload.tags)
     _refresh_item_embedding(db, item)
+    if should_reindex:
+        index_item_content(db, item)
 
     db.commit()
     db.refresh(item)

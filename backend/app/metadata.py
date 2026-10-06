@@ -17,6 +17,7 @@ class MetadataResult:
     title: Optional[str] = None
     description: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    content_text: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -40,6 +41,32 @@ def _text(value: Optional[str]) -> Optional[str]:
         return None
     cleaned = " ".join(value.split())
     return cleaned or None
+
+
+def _readable_content(soup: BeautifulSoup) -> Optional[str]:
+    for tag in soup.select("script, style, noscript, svg, nav, footer, header, form, aside"):
+        tag.decompose()
+
+    container = (
+        soup.find("article")
+        or soup.find("main")
+        or soup.find(attrs={"role": "main"})
+        or soup.body
+    )
+    if not container:
+        return None
+
+    blocks: list[str] = []
+    seen: set[str] = set()
+    for element in container.find_all(["h1", "h2", "h3", "p", "li"]):
+        value = _text(element.get_text(" ", strip=True))
+        if not value or len(value) < 30 or value in seen:
+            continue
+        seen.add(value)
+        blocks.append(value)
+
+    content = "\n\n".join(blocks)
+    return content[:40000] or None
 
 
 def extract_metadata(url: str) -> MetadataResult:
@@ -69,5 +96,11 @@ def extract_metadata(url: str) -> MetadataResult:
     title = _text(title)
     description = _text(description)
     thumbnail_url = urljoin(response.url, thumbnail_url) if thumbnail_url else None
+    content_text = _readable_content(soup)
 
-    return MetadataResult(title=title, description=description, thumbnail_url=thumbnail_url)
+    return MetadataResult(
+        title=title,
+        description=description,
+        thumbnail_url=thumbnail_url,
+        content_text=content_text,
+    )

@@ -44,6 +44,8 @@ class Item(Base):
     summary: Mapped[Optional[str]] = mapped_column(Text)
     note: Mapped[Optional[str]] = mapped_column(Text)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(Text)
+    content_text: Mapped[Optional[str]] = mapped_column(Text)
+    content_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending", index=True)
     embedding_text: Mapped[Optional[str]] = mapped_column(Text)
     embedding_provider: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     embedding_model: Mapped[Optional[str]] = mapped_column(String(255), index=True)
@@ -58,6 +60,41 @@ class Item(Base):
 
     user: Mapped[User] = relationship(back_populates="items")
     tags: Mapped[list["Tag"]] = relationship(secondary=item_tags, back_populates="items")
+    chunks: Mapped[list["ItemChunk"]] = relationship(
+        back_populates="item",
+        cascade="all, delete-orphan",
+        order_by="ItemChunk.chunk_index",
+    )
+
+
+class ItemChunk(Base):
+    __tablename__ = "item_chunks"
+    __table_args__ = (
+        UniqueConstraint("item_id", "chunk_index", name="uq_item_chunks_item_index"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    item_id: Mapped[int] = mapped_column(
+        ForeignKey("items.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding_provider: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    embedding_model: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+    embedding_dimensions: Mapped[Optional[int]] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+
+    item: Mapped[Item] = relationship(back_populates="chunks")
 
 
 class Tag(Base):

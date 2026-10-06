@@ -61,7 +61,20 @@ class Settings:
     supabase_url: Optional[str] = os.getenv("SUPABASE_URL")
     supabase_anon_key: Optional[str] = os.getenv("SUPABASE_ANON_KEY")
     enable_llm: bool = _env_bool("ENABLE_LLM", False)
+    llm_provider: str = os.getenv("LLM_PROVIDER", "huggingface").strip().lower()
     llm_api_key: Optional[str] = os.getenv("LLM_API_KEY")
+    huggingface_chat_model: str = os.getenv(
+        "HUGGINGFACE_CHAT_MODEL",
+        "openai/gpt-oss-20b",
+    )
+    openai_chat_model: str = os.getenv("OPENAI_CHAT_MODEL", "gpt-4.1-mini")
+    rag_min_similarity: float = _env_float("RAG_MIN_SIMILARITY", 0.55)
+    rag_top_k: int = _env_int("RAG_TOP_K", 5)
+    rag_chunk_size: int = _env_int("RAG_CHUNK_SIZE", 1800)
+    rag_chunk_overlap: int = _env_int("RAG_CHUNK_OVERLAP", 200)
+    rag_max_chunks_per_item: int = _env_int("RAG_MAX_CHUNKS_PER_ITEM", 4)
+    rag_max_content_chars: int = _env_int("RAG_MAX_CONTENT_CHARS", 7000)
+    rag_max_answer_tokens: int = _env_int("RAG_MAX_ANSWER_TOKENS", 400)
     enable_embeddings: bool = _env_bool("ENABLE_EMBEDDINGS", False)
     embedding_min_similarity: float = _env_float("EMBEDDING_MIN_SIMILARITY", 0.55)
     embedding_provider: str = os.getenv("EMBEDDING_PROVIDER", "huggingface").strip().lower()

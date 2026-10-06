@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { AddItemForm } from "@/components/AddItemForm";
+import { AgentAssistant } from "@/components/AgentAssistant";
 import { AccountBar, AuthPanel } from "@/components/AuthPanel";
 import { ItemCard } from "@/components/ItemCard";
+import { RagAssistant } from "@/components/RagAssistant";
 import { SearchFilters } from "@/components/SearchFilters";
 import { createItem, getItems, getTags } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -92,6 +94,10 @@ export default function HomePage() {
           <AddItemForm onCreate={handleCreate} />
         </section>
       ) : null}
+
+      {authReady && (!isAuthEnabled || session) ? <RagAssistant /> : null}
+
+      {authReady && (!isAuthEnabled || session) ? <AgentAssistant /> : null}
 
       {authReady && (!isAuthEnabled || session) ? (
       <section className="list-section">
