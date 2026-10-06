@@ -4,8 +4,10 @@ services:
     runtime: python
     rootDir: backend
     plan: free
+    autoDeployTrigger: checksPass
     buildCommand: pip install -r requirements.txt
-    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    preDeployCommand: alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -14,7 +16,29 @@ services:
         sync: false
       - key: DEFAULT_USER_EMAIL
         value: demo@recallbox.local
-      - key: ENABLE_LLM
-        value: "false"
-      - key: LLM_API_KEY
+      - key: ENABLE_AUTH
+        value: "true"
+      - key: SUPABASE_URL
         sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: ENABLE_EMBEDDINGS
+        value: "true"
+      - key: EMBEDDING_PROVIDER
+        value: huggingface
+      - key: EMBEDDING_MIN_SIMILARITY
+        value: "0.55"
+      - key: HUGGINGFACE_TOKEN
+        sync: false
+      - key: HUGGINGFACE_EMBEDDING_MODEL
+        value: BAAI/bge-small-en-v1.5
+      - key: ENABLE_LLM
+        value: "true"
+      - key: LLM_PROVIDER
+        value: huggingface
+      - key: HUGGINGFACE_CHAT_MODEL
+        value: openai/gpt-oss-20b
+      - key: RAG_MIN_SIMILARITY
+        value: "0.55"
+      - key: RAG_MAX_CHUNKS_PER_ITEM
+        value: "4"

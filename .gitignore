@@ -17,3 +17,5 @@ dist/
 build/
 coverage/
 .pytest_cache/
+tsconfig.tsbuildinfo
+frontend/tsconfig.tsbuildinfo

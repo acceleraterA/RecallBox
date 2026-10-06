@@ -1,8 +1,8 @@
 # RecallBox
 
-RecallBox is an open-source web app for saving links from different platforms, extracting basic metadata, organizing links with notes and tags, and finding them later with search and filters.
+RecallBox is an open-source RAG learning project for saving links, extracting and chunking article content, retrieving relevant passages with pgvector, and answering questions with grounded citations.
 
-V1 is intentionally small: one web app, one FastAPI API, one Postgres database, and a simple path to deploy from GitHub.
+V2 keeps the system intentionally compact for interview practice: Next.js, FastAPI, Postgres/pgvector, Supabase Auth, Hugging Face embeddings, and an optional Hugging Face or OpenAI answer model.
 
 ## Features For V1
 
@@ -23,15 +23,28 @@ V1 is intentionally small: one web app, one FastAPI API, one Postgres database, 
 - Keep optional LLM summary/tag enrichment disabled behind config.
 - Deploy frontend to Vercel and backend to Render, Railway, or Fly.io.
 
+## Features For V2
+
+- Extract readable article text without bypassing anti-bot protections.
+- Split saved content into bounded overlapping chunks.
+- Embed chunks with the configured embedding provider.
+- Retrieve user-scoped passages with pgvector cosine similarity.
+- Ask questions across saved links from the web UI.
+- Generate grounded answers with numbered source citations.
+- Carry a small amount of conversational history for follow-up questions.
+- Fall back to retrieved passages when LLM credits are unavailable.
+- Backfill existing items with a bounded command for free-tier demos.
+
 ## Tech Stack
 
 - Frontend: Next.js + TypeScript
 - Backend: FastAPI + Python
 - Auth: Supabase Auth, optional for local development
-- Database: Postgres with optional pgvector for semantic search
+- Database: Postgres with pgvector for item and chunk retrieval
 - ORM: SQLAlchemy
 - Migrations: Alembic
-- Metadata extraction: `requests` + BeautifulSoup
+- Content ingestion: `requests` + BeautifulSoup
+- RAG answer providers: Hugging Face Inference or OpenAI
 - Local database: Docker Compose
 - Frontend deployment: Vercel
 - Backend deployment: Render, Railway, or Fly.io
@@ -43,6 +56,9 @@ V1 is intentionally small: one web app, one FastAPI API, one Postgres database, 
 .
 ├── frontend/          # Next.js app
 ├── backend/           # FastAPI app, SQLAlchemy models, Alembic migrations
+├── scripts/           # local development helper scripts
+├── .github/workflows/ # GitHub Actions CI
+├── Makefile           # one-command local workflows
 ├── docker-compose.yml # local Postgres
 ├── render.yaml        # optional Render blueprint for the backend
 ├── LICENSE
@@ -57,6 +73,30 @@ Prerequisites:
 - Python 3.9+
 - Node.js 20.9+ and npm
 - Docker Desktop or another Docker runtime
+
+Fast path:
+
+```bash
+make dev
+```
+
+`make dev` starts local Postgres, installs missing backend/frontend dependencies, runs migrations, starts FastAPI on `http://localhost:8000`, and starts Next.js on `http://localhost:3000`. Press `Ctrl+C` to stop the backend and frontend processes.
+
+Useful local commands:
+
+```bash
+make help
+make install
+make db
+make migrate
+make backend
+make frontend
+make check
+make backfill-embeddings
+make backfill-rag
+```
+
+Manual setup is still available if you want to run each service yourself.
 
 Start Postgres:
 
@@ -93,6 +133,44 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+## CI And Auto-Deploy
+
+The repo includes GitHub Actions at `.github/workflows/ci.yml`.
+
+CI runs on pushes to `main` and `feature/**` branches, and on pull requests into `main`:
+
+- Backend job: installs Python dependencies, starts pgvector Postgres, runs Alembic migrations, compiles backend code, and verifies app imports.
+- Frontend job: installs Node dependencies, runs TypeScript checks, and builds the Next.js app.
+
+Recommended deployment automation:
+
+- Production services should track `main`.
+- Experimental/demo services can track `feature/v2-rag` or another feature branch.
+- Render backend: use `render.yaml` or set the service manually, then enable auto-deploy after checks pass. The blueprint uses `autoDeployTrigger: checksPass`, `preDeployCommand: alembic upgrade head`, and starts Uvicorn with `$PORT`.
+- Vercel frontend: connect the GitHub repo, set the project root to `frontend`, and enable Git auto-deploy. Vercel will build production from the production branch and previews from feature branches.
+
+The CI workflow can also trigger provider deploy hooks after backend and frontend checks pass. Add any of these GitHub repository secrets as needed:
+
+```bash
+RENDER_DEPLOY_HOOK_URL       # production backend from main
+VERCEL_DEPLOY_HOOK_URL       # production frontend from main
+RENDER_V2_DEPLOY_HOOK_URL    # v2 preview backend from feature/v2-rag
+VERCEL_V2_DEPLOY_HOOK_URL    # v2 preview frontend from feature/v2-rag
+```
+
+Use either provider-native Git auto-deploy or deploy hooks for a given service. Enabling both can create duplicate deployments. If the deploy-hook secrets are not set, the deploy jobs will safely skip that provider.
+
+With this setup, the normal development flow becomes:
+
+```bash
+make dev
+git add .
+git commit -m "Describe the change"
+git push
+```
+
+GitHub Actions runs automatically. If the branch is configured for auto-deploy, Vercel and Render can redeploy automatically after the checks pass.
+
 ## Environment Variables
 
 Backend, stored locally in `backend/.env`:
@@ -105,7 +183,16 @@ ENABLE_AUTH=false
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
 ENABLE_LLM=false
-LLM_API_KEY=
+LLM_PROVIDER=huggingface
+HUGGINGFACE_CHAT_MODEL=openai/gpt-oss-20b
+OPENAI_CHAT_MODEL=gpt-4.1-mini
+RAG_MIN_SIMILARITY=0.55
+RAG_TOP_K=5
+RAG_CHUNK_SIZE=1800
+RAG_CHUNK_OVERLAP=200
+RAG_MAX_CHUNKS_PER_ITEM=4
+RAG_MAX_CONTENT_CHARS=7000
+RAG_MAX_ANSWER_TOKENS=400
 ENABLE_EMBEDDINGS=false
 EMBEDDING_MIN_SIMILARITY=0.55
 EMBEDDING_PROVIDER=huggingface
@@ -202,6 +289,37 @@ Each saved vector records its provider, model, and dimension. Semantic search co
 
 The search UI includes a `Semantic` checkbox. For BGE models, RecallBox applies the model-recommended retrieval instruction to search queries only. Semantic results must meet `EMBEDDING_MIN_SIMILARITY`, which defaults to `0.55`; increase it for fewer, stricter matches or decrease it for broader recall. If embeddings are disabled or an embedding request fails, the backend falls back to normal keyword search.
 
+## RAG Assistant Setup
+
+V2 extracts readable article text, stores up to four chunks per item by default, and embeds those chunks for grounded question answering. The limits are intentionally conservative for free-tier interview demos.
+
+Run the V2 migration and index a few existing links:
+
+```bash
+cd backend
+source .venv/bin/activate
+alembic upgrade head
+python -m app.backfill_rag --limit 3
+```
+
+Retrieval-only mode costs no chat-completion credits and remains useful for debugging the RAG pipeline:
+
+```bash
+ENABLE_LLM=false
+```
+
+To enable Hugging Face grounded answers with the same token used for embeddings:
+
+```bash
+ENABLE_LLM=true
+LLM_PROVIDER=huggingface
+HUGGINGFACE_CHAT_MODEL=openai/gpt-oss-20b
+RAG_MIN_SIMILARITY=0.55
+RAG_TOP_K=5
+```
+
+When Hugging Face free credits are exhausted, RecallBox returns the retrieved passages and citations instead of failing the request. To index one item while conserving credits, run `python -m app.backfill_rag --item-id ITEM_ID`.
+
 For Neon and other SSL-required providers, the value often looks like:
 
 ```bash
@@ -258,7 +376,16 @@ ENABLE_AUTH=true
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY
 ENABLE_LLM=false
-LLM_API_KEY=
+LLM_PROVIDER=huggingface
+HUGGINGFACE_CHAT_MODEL=openai/gpt-oss-20b
+OPENAI_CHAT_MODEL=gpt-4.1-mini
+RAG_MIN_SIMILARITY=0.55
+RAG_TOP_K=5
+RAG_CHUNK_SIZE=1800
+RAG_CHUNK_OVERLAP=200
+RAG_MAX_CHUNKS_PER_ITEM=4
+RAG_MAX_CONTENT_CHARS=7000
+RAG_MAX_ANSWER_TOKENS=400
 ENABLE_EMBEDDINGS=false
 EMBEDDING_MIN_SIMILARITY=0.55
 EMBEDDING_PROVIDER=huggingface
@@ -280,12 +407,17 @@ Render option:
    ```bash
    pip install -r requirements.txt
    ```
-5. Use start command:
+5. Use pre-deploy command:
    ```bash
-   alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+   alembic upgrade head
    ```
-6. Add the environment variables above.
-7. Deploy and verify `/health`.
+6. Use start command:
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port $PORT
+   ```
+7. Add the environment variables above.
+8. Set auto-deploy to run after CI checks pass.
+9. Deploy and verify `/health`.
 
 Railway option:
 
@@ -312,12 +444,25 @@ Fly.io option:
 
 ```http
 POST /items
+POST /rag/ask
 GET /items?q=keyword&platform=web&tag=profile&date_from=2026-01-01&date_to=2026-01-31&semantic=false&limit=50&offset=0
 GET /items/tags
 GET /items/{id}
 PATCH /items/{id}
 DELETE /items/{id}
 ```
+
+`POST /rag/ask` accepts:
+
+```json
+{
+  "question": "Why do Kafka consumers rebalance?",
+  "history": [],
+  "top_k": 5
+}
+```
+
+The response includes `answer`, `citations`, `mode`, and the answer-model name. `mode` is `llm`, `retrieval_only`, or `no_context`.
 
 `PATCH /items/{id}` accepts:
 
@@ -376,6 +521,9 @@ V1.5:
 
 V2:
 
+- Add article-content ingestion, chunk embeddings, grounded answers, citations, and follow-up context. Implemented on `feature/v2-rag`.
+- Add RAG evaluation datasets and retrieval/groundedness metrics.
+- Add explicit agent tools for searching, inspecting, summarizing, and organizing saved content.
 - Add resurfacing suggestions based on recent search behavior or user context.
 - Example: "You searched for Kafka. Here are 3 related items you saved before."
 - Add collections or folders if needed.
